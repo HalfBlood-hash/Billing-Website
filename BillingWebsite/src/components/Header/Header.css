@@ -1,0 +1,55 @@
+/* Full-width header background bar */
+.parent {
+    background-color: red; /* your bar color */
+    width: 100%;
+  }
+  
+  /* Inner content: flex, spaced, centered with max-width */
+  .container {
+    display: flex;
+    align-items: center;           /* vertical centering */
+    justify-content: space-between;/* logo left, nav right */
+    max-width: 1440px;             /* content caps at 1440px */
+    width: 100%;
+    height: 90px;
+    background-color: white;
+    box-sizing: border-box;
+    padding: 0 40px;               /* gutters at the edges */
+    margin: 0 auto;                /* centers the content after 1440px */
+  }
+  
+  /* Push nav to the right using flex or auto margin */
+  .nav-right {
+    margin-left: auto;
+  }
+  
+  /* Basic nav list styles */
+  ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;                    /* reset default browser padding */
+    display: flex;
+    gap: 24px;                     /* spacing between items */
+    font-size: 20px;               /* adjust as needed */
+    line-height: 1;                /* avoid inheriting 90px line-height */
+  }
+  
+  /* Optional: keep the logo nicely sized */
+  .container img {
+    height: 48px;                  /* fits inside 90px header */
+    width: auto;
+  }
+  
+  /* (Optional) Responsive tweaks for small screens */
+  @media (max-width: 640px) {
+    .container {
+      padding: 0 16px;
+    }
+    ul {
+      font-size: 16px;
+      gap: 16px;
+    }
+    .container img {
+      height: 40px;
+    }
+  }

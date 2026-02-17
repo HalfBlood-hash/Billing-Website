@@ -1,143 +1,355 @@
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { saveAs } from "file-saver";
 
-// src/pdf/generateInvoicePdf.js
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { saveAs } from 'file-saver';
-
-/**
- * Generate a PDF invoice with fillable fields (AcroForm) for header data.
- * Items are drawn as table rows. You can flatten the form to make it non-editable.
- */
 export async function generateInvoicePdf({
   customerName,
   invoiceNumber,
-  invoiceDate,     // string e.g. '2026-01-20'
-  items = [],      // [{ desc, qty, price }]
-  editable = true, // if false, the form will be flattened
-  fileName,        // optional override for filename
+  invoiceDate,
+  items = [],
+  logoPath = "/vite.svg", // you can change later
+  fileName,
 }) {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595.28, 841.89]); // A4 in points (72dpi)
+  const page = pdfDoc.addPage([595.28, 841.89]); // A4
   const { width, height } = page.getSize();
-  const margin = 40;
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const form = pdfDoc.getForm();
+  const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // Title
-  page.drawText('INVOICE', {
-    x: margin,
-    y: height - margin - 10,
-    size: 24,
-    font,
-    color: rgb(0.1, 0.1, 0.1),
+  const margin = 40;
+
+  /* ================= LOGO ================= */
+  try {
+    const logoBytes = await fetch(logoPath).then((r) => r.arrayBuffer());
+    const logoImage = await pdfDoc.embedPng(logoBytes);
+
+    page.drawImage(logoImage, {
+      x: margin,
+      y: height - 90,
+      width: 120,
+      height: 60,
+    });
+  } catch {
+    // ignore if logo missing
+  }
+
+  /* ================= INVOICE HEADER RIGHT ================= */
+
+  page.drawText(`INVOICE ${invoiceNumber || ""}`, {
+    x: width - margin - 180,
+    y: height - margin,
+    size: 14,
+    font: bold,
   });
 
-  // Header fields
-  const label = (text, x, y) =>
-    page.drawText(text, { x, y, size: 10, font, color: rgb(0.3, 0.3, 0.3) });
+  page.drawText(`Date: ${invoiceDate || ""}`, {
+    x: width - margin - 180,
+    y: height - margin - 16,
+    size: 10,
+    font,
+  });
 
-  const fieldHeight = 20;
-  const startY = height - margin - 50;
+  /* ================= COMPANY DETAILS LEFT ================= */
 
-  // Customer Name
-  label('Customer Name', margin, startY + 5);
-  const nameField = form.createTextField('customerName');
-  nameField.setText(customerName || '');
-  nameField.addToPage(page, { x: margin, y: startY - fieldHeight + 5, width: 240, height: fieldHeight });
+  let yLeft = height - 110;
 
-  // Invoice Number
-  label('Invoice #', margin + 260, startY + 5);
-  const invField = form.createTextField('invoiceNumber');
-  invField.setText(String(invoiceNumber || ''));
-  invField.addToPage(page, { x: margin + 260, y: startY - fieldHeight + 5, width: 120, height: fieldHeight });
-
-  // Date
-  label('Date', margin + 400, startY + 5);
-  const dateField = form.createTextField('invoiceDate');
-  dateField.setText(invoiceDate || '');
-  dateField.addToPage(page, { x: margin + 400, y: startY - fieldHeight + 5, width: 140, height: fieldHeight });
-
-  // Items table header
-  let tableY = startY - 60;
-  const headers = [
-    { text: 'Description', width: 300 },
-    { text: 'Qty', width: 60 },
-    { text: 'Price', width: 80 },
-    { text: 'Amount', width: 80 },
+  const companyLines = [
+    "Ecoliving Property And Developer Pvt Ltd",
+    "C/O Munna Kumar Gupta",
+    "Near Sumitra College Dumraon",
+    "Dist - Buxar (Bihar)",
+    "Contact: 9304636550",
+    "Email: ecolivingproperty@gmail.com",
   ];
 
-  // Draw headers
+  companyLines.forEach((line, i) => {
+    page.drawText(line, {
+      x: margin,
+      y: yLeft,
+      size: i === 0 ? 12 : 10,
+      font: i === 0 ? bold : font,
+    });
+    yLeft -= 14;
+  });
+
+  /* ================= BILL TO RIGHT ================= */
+
+  const billBarY = height - 150;
+
+  page.drawRectangle({
+    x: width / 2,
+    y: billBarY,
+    width: width / 2 - margin,
+    height: 18,
+    color: rgb(0.18, 0.44, 0.78),
+  });
+
+  page.drawText("Bill To :", {
+    x: width / 2 + 8,
+    y: billBarY + 5,
+    size: 10,
+    font: bold,
+    color: rgb(1, 1, 1),
+  });
+
+  page.drawText(customerName || "", {
+    x: width / 2,
+    y: billBarY - 14,
+    size: 11,
+    font: bold,
+  });
+
+  /* ================= TABLE HEADER ================= */
+
+  let tableY = billBarY - 50;
+
+  const cols = [
+    { title: "S.No", width: 40 },
+    { title: "Particulars", width: 240 },
+    { title: "Qty", width: 60 },
+    { title: "Unit Price", width: 80 },
+    { title: "Amount", width: 80 },
+  ];
+
+  page.drawRectangle({
+    x: margin,
+    y: tableY - 4,
+    width: width - margin * 2,
+    height: 18,
+    color: rgb(0.18, 0.44, 0.78),
+  });
+
   let x = margin;
-  headers.forEach(h => {
-    page.drawText(h.text, { x, y: tableY, size: 11, font, color: rgb(0, 0, 0) });
-    x += h.width;
+
+  cols.forEach((c) => {
+    page.drawText(c.title, {
+      x: x + 4,
+      y: tableY,
+      size: 10,
+      font: bold,
+      color: rgb(1, 1, 1),
+    });
+    x += c.width;
   });
 
-  tableY -= 14;
-  page.drawLine({
-    start: { x: margin, y: tableY },
-    end: { x: width - margin, y: tableY },
-    thickness: 1,
-    color: rgb(0, 0, 0),
-  });
+  /* ================= TABLE ROWS ================= */
 
-  // Draw rows
+  tableY -= 20;
   let subtotal = 0;
-  const rowHeight = 22;
-  for (const it of items) {
+  let totalQty = 0;
+
+  items.forEach((it, index) => {
     const qty = Number(it.qty) || 0;
     const price = Number(it.price) || 0;
     const amount = qty * price;
-    subtotal += amount;
 
-    const rowY = tableY - rowHeight + 4;
+    subtotal += amount;
+    totalQty += qty;
+
+    const row = [
+      String(index + 1),
+      it.desc || "",
+      qty ? String(qty) : "",
+      price ? `Rs. ${price.toFixed(2)}` : "",
+      amount ? `Rs. ${amount.toFixed(2)}` : "",
+    ];
+
     let colX = margin;
 
-    page.drawText(String(it.desc || ''), { x: colX, y: rowY, size: 10, font }); colX += headers[0].width;
-    page.drawText(qty ? String(qty) : '', { x: colX, y: rowY, size: 10, font }); colX += headers[1].width;
-    page.drawText(price ? price.toFixed(2) : '', { x: colX, y: rowY, size: 10, font }); colX += headers[2].width;
-    page.drawText(amount ? amount.toFixed(2) : '', { x: colX, y: rowY, size: 10, font });
+    row.forEach((txt, i) => {
+      page.drawText(txt, { x: colX + 4, y: tableY, size: 10, font });
+      colX += cols[i].width;
+    });
 
-    tableY -= rowHeight;
-
-    // (Optional) add new pages if needed
-    if (tableY < margin + 120) {
-      // Draw totals first, or add new page and redraw headers
-      // For simplicity, this sample keeps single-page invoices.
-      break;
-    }
-  }
-
-  // Totals
-  tableY -= 10;
-  page.drawLine({
-    start: { x: width - margin - 220, y: tableY },
-    end: { x: width - margin, y: tableY },
-    thickness: 1,
-    color: rgb(0, 0, 0),
+    tableY -= 18;
   });
 
-  page.drawText('Subtotal:', { x: width - margin - 200, y: tableY - 16, size: 12, font });
-  page.drawText(subtotal.toFixed(2), { x: width - margin - 70, y: tableY - 16, size: 12, font });
+  /* ================= TOTAL QTY ================= */
 
-  // Flatten or keep editable
-  if (!editable) {
-    form.flatten(); // makes fields non-editable
-  } else {
-    // Optional: make fields read-only but visible as fields
-    nameField.enableReadOnly();
-    invField.enableReadOnly();
-    dateField.enableReadOnly();
-  }
+/* ================= TOTAL QTY + TOTAL AMOUNT BAR ================= */
 
-  // Save & download with controlled filename
-  const bytes = await pdfDoc.save();
-  const blob = new Blob([bytes], { type: 'application/pdf' });
+/* ================= SUMMARY BLUE BAR ================= */
+
+tableY -= 12; // safe spacing from table above
+
+const barHeight = 18; // smaller professional height
+const barY = tableY;
+
+// Draw blue bar
+page.drawRectangle({
+  x: margin,
+  y: barY,
+  width: width - margin * 2,
+  height: barHeight,
+  color: rgb(0.18, 0.44, 0.78),
+});
+
+// Common vertical text alignment (center of bar)
+const textY = barY + 5;
+
+/* ---- Left: Total Qty label ---- */
+page.drawText("Total Qty", {
+  x: margin + 6,
+  y: textY,
+  size: 10,
+  font: bold,
+  color: rgb(1, 1, 1),
+});
+
+/* ---- Middle: Qty number (under Qty column) ---- */
+const qtyX = margin + 40 + 240 + 6;
+
+page.drawText(String(totalQty), {
+  x: qtyX,
+  y: textY,
+  size: 10,
+  font: bold,
+  color: rgb(1, 1, 1),
+});
+
+/* ---- Right: Total Amount (same horizontal line) ---- */
+const amountX = width - margin - 110;
+
+page.drawText(`Rs. ${subtotal.toFixed(2)}`, {
+  x: amountX,
+  y: textY,
+  size: 10,
+  font: bold,
+  color: rgb(1, 1, 1),
+});
+
+/* ===== Move cursor safely below bar to avoid overlap ===== */
+tableY = barY - 25;
+
+
+/* ================= SAME LINE: AMOUNT WORDS (LEFT) + TOTAL (RIGHT) ================= */
+
+const baseY = tableY;
+const rightText = `TOTAL AMOUNT  Rs. ${subtotal.toFixed(2)}`;
+
+// ---- FIXED RIGHT POSITION ----
+const rightTextWidth = bold.widthOfTextAtSize(rightText, 11);
+const rightX = width - margin - rightTextWidth;
+
+// Draw RIGHT text first (fixed anchor)
+page.drawText(rightText, {
+  x: rightX,
+  y: baseY,
+  size: 11,
+  font: bold,
+});
+
+
+// ---- LEFT TEXT WITH SAFE WRAP ----
+const leftText = `Amount (in words): Rupees ${numberToWords(subtotal)} Only`;
+const maxLeftWidth = rightX - margin - 10;
+const lineHeight = 12;
+
+// split text based on actual font width
+function wrapLeftText(text, maxWidth) {
+  const words = text.split(" ");
+  const lines = [];
+  let line = "";
+
+  words.forEach((word) => {
+    const test = line + word + " ";
+    const w = font.widthOfTextAtSize(test, 10);
+
+    if (w > maxWidth && line !== "") {
+      lines.push(line.trim());
+      line = word + " ";
+    } else {
+      line = test;
+    }
+  });
+
+  if (line) lines.push(line.trim());
+  return lines;
+}
+
+const lines = wrapLeftText(leftText, maxLeftWidth);
+
+// draw wrapped left lines
+lines.forEach((ln, i) => {
+  page.drawText(ln, {
+    x: margin,
+    y: baseY - i * lineHeight,
+    size: 10,
+    font,
+  });
+});
+
+// move cursor below the taller block
+tableY = baseY - lines.length * lineHeight - 15;
+
+  /* ================= TERMS ================= */
+
+
+/* ================= TERMS ================= */
+
+const termsY = tableY - 10;
+
+page.drawText("Terms / Declaration", {
+  x: margin,
+  y: termsY,
+  size: 11,
+  font: bold,
+});
+
+page.drawText("Terms and conditions here ...", {
+  x: margin,
+  y: termsY - 16,
+  size: 10,
+  font,
+});
+
+  /* ================= FOOTER ================= */
+
+  page.drawText("For, Ecoliving Property And Developer Pvt Ltd", {
+    x: width - 260,
+    y: 80,
+    size: 10,
+    font,
+  });
+
+  /* ================= SAVE ================= */
+
+  const pdfBytes = await pdfDoc.save();
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
 
   if (!fileName) {
-    const safeCustomer = (customerName || 'Customer').replace(/[^a-z0-9-_]+/gi, '_');
+    const safeCustomer = (customerName || "Customer").replace(/[^a-z0-9]/gi, "_");
     const datePart = invoiceDate || new Date().toISOString().slice(0, 10);
-    fileName = `Invoice_${invoiceNumber || 'NA'}_${safeCustomer}_${datePart}.pdf`;
+    fileName = `Invoice_${invoiceNumber || "NA"}_${safeCustomer}_${datePart}.pdf`;
   }
+
   saveAs(blob, fileName);
+}
+
+/* ================= NUMBER TO WORDS ================= */
+
+function numberToWords(num) {
+  if (!num) return "Zero";
+
+  const a = [
+    "", "One", "Two", "Three", "Four", "Five", "Six",
+    "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
+    "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+    "Seventeen", "Eighteen", "Nineteen",
+  ];
+
+  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+  if (num < 20) return a[num];
+  if (num < 100) return b[Math.floor(num / 10)] + " " + a[num % 10];
+  if (num < 1000)
+    return a[Math.floor(num / 100)] + " Hundred " + numberToWords(num % 100);
+
+  if (num < 100000)
+    return numberToWords(Math.floor(num / 1000)) + " Thousand " + numberToWords(num % 1000);
+
+  if (num < 10000000)
+    return numberToWords(Math.floor(num / 100000)) + " Lakh " + numberToWords(num % 100000);
+
+  return numberToWords(Math.floor(num / 10000000)) + " Crore " + numberToWords(num % 10000000);
 }

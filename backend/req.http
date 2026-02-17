@@ -1,0 +1,23 @@
+
+
+###
+get http://localhost:8000/api/notes
+
+
+###
+post http://localhost:8000/api/notes
+Content-Type: application/json
+
+{
+    "title":"second  post ",
+    "content":"second content"
+}
+
+###
+put http://localhost:8000/api/notes/6994082a4b2280acdcdb905e
+Content-Type: application/json
+
+{
+    "title":"second post ",
+    "content":"updated second content"
+}
