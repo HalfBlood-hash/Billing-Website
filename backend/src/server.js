@@ -18,7 +18,7 @@ app.use(cors({
     origin: "http://localhost:5173"
 }))
 
-// middleware to take content
+// middleware to take contents
 app.use(express.json())
 
 app.use('/api/notes',notesRoute)

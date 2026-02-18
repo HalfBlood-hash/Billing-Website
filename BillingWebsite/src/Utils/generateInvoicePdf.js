@@ -326,7 +326,7 @@ page.drawText("Terms and conditions here ...", {
   saveAs(blob, fileName);
 }
 
-/* ================= NUMBER TO WORDS ================= */
+/* ================= NUMBER To WORDS ================= */
 
 function numberToWords(num) {
   if (!num) return "Zero";

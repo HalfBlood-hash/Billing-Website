@@ -2,7 +2,7 @@
 
 import noteModel from "../Models/Note.model.js"
  
-
+// controllers
 
 
 export const getAllNotes=async (req,res)=>{

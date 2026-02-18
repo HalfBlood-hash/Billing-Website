@@ -1,3 +1,7 @@
+// not found page
+
+
+
 import { NotebookIcon } from "lucide-react";
 import { Link } from "react-router";
 

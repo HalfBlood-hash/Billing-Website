@@ -9,7 +9,7 @@ export const connectDb=async ()=>{
         console.log("Database connection successfull")
     } catch (error) {
         console.error('Database connection failed:', error);
-        process.exit(1);//exit with failure 
+        process.exit(1);//exit with failure  s
     
     }
 }

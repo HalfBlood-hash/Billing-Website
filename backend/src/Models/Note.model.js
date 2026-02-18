@@ -3,7 +3,7 @@
 import mongoose  from "mongoose";
 
 
-// 1- create schema 
+// 1- create schema s
 // 2- create model from that schema
 
 const noteSchema=new mongoose.Schema({

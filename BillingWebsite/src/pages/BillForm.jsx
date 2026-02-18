@@ -1,5 +1,5 @@
 
-// src/components/BillForm.jsx
+// src/components/BillForm.jsxs
 import React, { useState, useEffect } from 'react';
 import { generateInvoicePdf } from "../Utils/generateInvoicePdf.js";
 
