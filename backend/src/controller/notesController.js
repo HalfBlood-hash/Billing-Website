@@ -18,6 +18,16 @@ export const getAllNotes=async (req,res)=>{
    }
 }
 
+export const getNoteById=async (req,res)=>{
+    
+    const noteId=req.params.id;
+   
+    const note=await noteModel.findById(noteId)
+    res.status(200).json({message:"Get Note By Id",payload:note})
+
+}
+
+
 export const createNote=async (req,res)=>{
     
     const {title,content}=req.body;
@@ -48,6 +58,12 @@ export const updateNote=async (req,res)=>{
     }
 }
 
-export const deleteNote=(req,res)=>{
-    res.status(200).send('delete note')
+export const deleteNote=async (req,res)=>{
+   
+    const noteId=req.params.id;
+
+    const deletedNote=await noteModel.findByIdAndDelete(noteId)
+    res.status(200).json({message:"Note deleted successfully",payload:deletedNote})
+
+
 }

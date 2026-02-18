@@ -1,9 +1,10 @@
 
 
+import dotenv from "dotenv"
+import cors from "cors"
 import express from "express"
 import notesRoute from "./Router/notesRoute.js"
 import { connectDb } from "./config/db.js"
-import dotenv from "dotenv"
 
 dotenv.config()
 
@@ -13,6 +14,9 @@ const port=process.env.PORT
 const app=express()
 connectDb();
 
+app.use(cors({
+    origin: "http://localhost:5173"
+}))
 
 // middleware to take content
 app.use(express.json())
