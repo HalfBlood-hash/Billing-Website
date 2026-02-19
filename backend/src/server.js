@@ -1,22 +1,32 @@
 
 
 import dotenv from "dotenv"
-import cors from "cors"
-import express from "express"
-import notesRoute from "./Router/notesRoute.js"
-import { connectDb } from "./config/db.js"
-
 dotenv.config()
 
 
 
+import cors from "cors"
+import express from "express"
+import notesRoute from "./Router/notesRoute.js"
+import { connectDb } from "./config/db.js"
+import path, { dirname } from "path"
+
+
+
+
+const __dirname=path.resolve();
 const port=process.env.PORT
 const app=express()
 connectDb();
 
-app.use(cors({
-    origin: "http://localhost:5173"
-}))
+
+// for local development 
+if(process.env.NODE_ENV!=="production"){
+
+    app.use(cors({
+        origin: "http://localhost:5173"
+    }))
+}
 
 // middleware to take contents
 app.use(express.json())
@@ -24,11 +34,18 @@ app.use(express.json())
 app.use('/api/notes',notesRoute)
 
 
+// in production 
+if(process.env.NODE_ENV==="production")
+{
 
+    app.use(express.static(path.join(__dirname,"../BillingWebsite/dist")))
+    app.get(/.*/,(req,res)=>{
+        res.sendFile(path.join(__dirname,"../BillingWebsite","dist","index.html"))
+    })
+    
+}
 app.listen(port,()=>{
     console.log(`Server is started on port ${port}`)
 })
 
 
-
-// mongodb+srv://2309000satyam_db_user:khCIiAEpj6KJtQRx@cluster0.zbppvob.mongodb.net/?appName=Cluster0

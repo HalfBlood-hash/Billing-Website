@@ -12,6 +12,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.5",
+    "bill-website": "file:..",
     "bootstrap": "^5.3.8",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.574.0",
